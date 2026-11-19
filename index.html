@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IMPACT Lab App</title>
+<style>
+  :root { --bg: #f4f4f4; --fg: #141414; --muted: #666; --red: #d71920; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #161616; --fg: #eee; --muted: #aaa; } }
+  :root[data-theme="dark"] { --bg: #161616; --fg: #eee; --muted: #aaa; }
+  body { margin: 0; padding: 40px 16px; font-family: "Segoe UI", Arial, sans-serif; background: var(--bg); color: var(--fg); text-align: center; }
+  .logo { display: inline-block; background: var(--red); color: #fff; border-radius: 10px; padding: 2px 10px; font-weight: 800; }
+  .muted { color: var(--muted); font-size: 14px; }
+  .err { color: #b42318; }
+</style>
+</head>
+<body>
+<h2><span class="logo">IL</span> IMPACT Lab App</h2>
+<p id="msg" class="muted">Loading…</p>
+<script>
+/* IMPACT Lab – the site on GitHub Pages. script.google.com pages do not open in a browser that is signed in to more than one
+ * Google account, so this page asks the lab server (the Google Apps Script web app) for the app page with fetch() – no Google
+ * cookies – and runs it here; the page then talks to the server the same way (its "remote" mode). ?gcode=… comes back from
+ * signin.html after "Sign in with Google". */
+(function () {
+  var SERVER = "https://script.google.com/macros/s/AKfycbyuN_AzGUko40VRqM6zlv_yosUjaoL-821UcLuxYS6QdeqGbSZPrpotWMUW4HSn6QviOQ/exec";
+  var msg = document.getElementById("msg");
+  function show(t, err) { msg.textContent = t; msg.className = err ? "err" : "muted"; }
+  var q = new URLSearchParams(location.search), gcode = (q.get("gcode") || "").replace(/[^A-Za-z0-9]/g, "");
+  if (gcode) history.replaceState(null, "", location.pathname); // the one-time code is used once – keep it out of the address
+  var token = null;
+  try { token = (JSON.parse(localStorage.getItem("billapp_session")) || {}).token || null; } catch (e) { }
+  fetch(SERVER, { method: "POST", body: JSON.stringify({ action: "sitePage", args: { token: token, gcode: gcode } }), headers: { "Content-Type": "text/plain;charset=utf-8" }, redirect: "follow" })
+    .then(function (r) { return r.json(); })
+    .then(function (res) {
+      if (!res.ok) throw new Error(res.error || "The lab server did not answer");
+      var html = res.data.html.replace("<head>", "<head><script>window.BILL_SERVER_URL=" + JSON.stringify(SERVER) + ";<\/script>");
+      document.open(); document.write(html); document.close();
+    })
+    .catch(function (e) { show("Could not load the IMPACT Lab App: " + (e && e.message ? e.message : e) + " – check the internet and reload.", true); });
+})();
+</script>
+</body>
+</html>
